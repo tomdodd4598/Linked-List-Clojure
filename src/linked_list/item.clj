@@ -15,13 +15,9 @@
   (iterator [this]
     (ItemIterator. (atom this))))
 
-(defn new [value next]
-  (Item. value next))
-
 (defn print-get-next [item]
   (let [next (.next item)]
-    (print (.value item))
-    (print (if (nil? next) "\n" ", "))
+    (print (format "%s%s" (.value item) (if (nil? next) "\n" ", ")))
     next))
 
 (defn fold [f-some f-last f-empty accumulator item]
@@ -36,7 +32,10 @@
   (if (some? current)
     (let [next (.next current)]
       (if (some? next)
-        (fold' f-start f-only f-middle f-last f-empty (if (some? previous) (f-middle previous current next accumulator) (f-start current next accumulator)) current next)
+        (let [newAccumulator (if (some? previous)
+                               (f-middle previous current next accumulator)
+                               (f-start current next accumulator))]
+          (fold' f-start f-only f-middle f-last f-empty newAccumulator current next))
         (if (some? previous)
           (f-last previous current accumulator)
           (f-only current accumulator))))
@@ -46,7 +45,7 @@
   (if (some? item)
     (let [next (.next item)]
       (if (some? next)
-        (foldback f-some f-last f-empty (fn [inner-val] (generator (f-some item next inner-val))) next)
+        (foldback f-some f-last f-empty #(generator (f-some item next %)) next)
         (generator (f-last item))))
     (generator (f-empty))))
 
@@ -54,6 +53,9 @@
   (if (some? current)
     (let [next (.next current)]
       (if (some? next)
-        (foldback' f-start f-only f-middle f-last f-empty (fn [inner-val] (generator (if (some? previous) (f-middle previous current next inner-val) (f-start current next inner-val)))) current next)
+        (let [newInner #(if (some? previous)
+                         (f-middle previous current next %)
+                         (f-start current next %))]
+          (foldback' f-start f-only f-middle f-last f-empty (comp generator newInner) current next))
         (generator (if (some? previous) (f-last previous current) (f-only current)))))
     (generator (f-empty))))

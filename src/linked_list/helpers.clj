@@ -1,27 +1,26 @@
 (ns linked-list.helpers
-  (:require [linked-list.item :as item]))
+  (:require [linked-list.item :as item])
+  (:import (linked_list.item Item)))
 
 (defn insert-item [start val insert-before]
   (println (format "Creating item: %s" val))
-  (let [insert (fn [item before after] (if (insert-before val item) before after))
-        f-start (fn [current _ inner-val] (insert current (item/new val current) (item/new (.value current) inner-val)))
-        f-only (fn [current] (insert current (item/new val current) (item/new (.value current) (item/new val nil))))
-        f-middle (fn [previous current next inner-val] (insert previous current (f-start current next inner-val)))
-        f-last (fn [previous current] (insert previous current (f-only current)))
-        f-empty (fn [] (item/new val nil))]
+  (let [insert #(if (insert-before val %1) %2 %3)
+        f-start #(insert %1 (Item. val %1) (Item. (.value %1) %3))
+        f-only #(insert % (Item. val %) (Item. (.value %) (Item. val nil)))
+        f-middle #(insert %1 %2 (f-start %2 %3 %4))
+        f-last #(insert %1 %2 (f-only %2))
+        f-empty #(Item. val nil)]
     (item/foldback' f-start f-only f-middle f-last f-empty identity nil start)))
 
 (defn remove-item [start val value-equals]
-  (let [remove (fn [item remove retain] (if (value-equals item val) remove retain))
-        f-start (fn [current next inner-val] (remove current [true next] [(first inner-val) (item/new (.value current) (second inner-val))]))
-        f-only (fn [current] (remove current [true nil] [false current]))
-        f-middle (fn [previous current next inner-val] (remove previous [true current] (f-start current next inner-val)))
-        f-last (fn [previous current] (remove previous [true current] (f-only current)))
-        f-empty (fn [] [false nil])
+  (let [remove #(if (value-equals %1 val) %2 %3)
+        f-start #(remove %1 [true %2] [(first %3) (Item. (.value %1) (second %3))])
+        f-only #(remove % [true nil] [false %])
+        f-middle #(remove %1 [true %2] (f-start %2 %3 %4))
+        f-last #(remove %1 [true %2] (f-only %2))
+        f-empty #([false nil])
         [removed result] (item/foldback' f-start f-only f-middle f-last f-empty identity nil start)]
-    (if removed
-      (println (format "Removed item: %s" val))
-      (println (format "Item %s does not exist!" val)))
+    (println (format (if removed "Removed item: %s" "Item %s does not exist!") val))
     result))
 
 (defn remove-all [_]
@@ -41,13 +40,13 @@
     (print-recursive (item/print-get-next start))))
 
 (defn print-fold [start]
-  (let [f-some (fn [current _ accumulator] (format "%s%s, " accumulator (.value current)))
-        f-last (fn [current accumulator] (format "%s%s\n" accumulator (.value current)))
-        f-empty (fn [accumulator] accumulator)]
+  (let [f-some #(format "%s%s, " %3 (.value %1))
+        f-last #(format "%s%s\n" %2 (.value %1))
+        f-empty #(%)]
     (print (item/fold f-some f-last f-empty "" start))))
 
 (defn print-foldback [start]
-  (let [f-some (fn [current _ inner-val] (format "%s, %s" (.value current) inner-val))
-        f-last (fn [current] (format "%s\n", (.value current)))
-        f-empty (fn [] "")]
+  (let [f-some #(format "%s, %s" (.value %1) %3)
+        f-last #(format "%s\n", (.value %))
+        f-empty #("")]
     (print (item/foldback f-some f-last f-empty identity start))))

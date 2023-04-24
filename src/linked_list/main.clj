@@ -10,8 +10,8 @@
 (defn is-number-string [str]
   (some? (re-matches number-regex str)))
 
-(defn insert-before [^String val oth]
-  (let [^String other-val (.value oth)]
+(defn insert-before [^String val item]
+  (let [^String other-val (.value item)]
     (if (and (is-number-string val) (is-number-string other-val))
       (< (.compareTo (BigInteger. val) (BigInteger. other-val)) 1)
       (< (.compareTo val other-val) 1))))
@@ -24,10 +24,10 @@
     (println))
   (println "Awaiting input...")
   (let [input (read-line)
-        main' (fn [start] (main false start))
-        parse-fail (fn [start]
+        main' #(main false %)
+        parse-fail #(do
                      (println "\nCould not parse input!")
-                     (main' start))]
+                     (main' %))]
     (if (.isEmpty input)
       (do
         (println "\nProgram terminated!")
@@ -43,9 +43,9 @@
                (println "\nRemoving item...")
                (main' (helpers/remove-item start substr value-equals)))
              (parse-fail start))))
-        (let [print-list (fn [str, f-print]
-                           (println str)
-                           (f-print start)
+        (let [print-list #(do
+                           (println %1)
+                           (%2 start)
                            (main' start))]
           (case input
             "l" (print-list "\nLoop print..." helpers/print-loop)
